@@ -1,0 +1,361 @@
+    <title>AI Art Generator: Photorealistic and Detailed Styles on Dark Background</title>
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            font-family: Arial, sans-serif;
+            background-color: #000000;
+            color: #ffffff;
+        }
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            text-align: center;
+            color: #3498db;
+        }
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            justify-content: space-between;
+            margin-bottom: 20px;
+        }
+        select, input, button {
+            padding: 10px;
+            font-size: 16px;
+            background-color: #333333;
+            color: #ffffff;
+            border: 1px solid #555555;
+        }
+        .gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 20px;
+        }
+        .art-piece {
+            background-color: #222222;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px rgba(255,255,255,0.1);
+            transition: transform 0.3s ease;
+            position: relative;
+        }
+        .art-piece:hover {
+            transform: scale(1.05);
+        }
+        .art-piece img {
+            width: 100%;
+            height: auto;
+            object-fit: cover;
+            cursor: pointer;
+        }
+        .art-info {
+            padding: 15px;
+        }
+        .art-info h3 {
+            margin: 0 0 10px 0;
+            font-size: 18px;
+            color: #ffffff;
+        }
+        .art-info p {
+            margin: 0;
+            font-size: 14px;
+            color: #aaaaaa;
+        }
+        .similar-btn {
+            display: block;
+            width: 100%;
+            padding: 10px;
+            background-color: #3498db;
+            color: white;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            margin-top: 10px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .similar-btn:hover {
+            background-color: #2980b9;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0,0,0,0.9);
+        }
+        .modal-content {
+            margin: auto;
+            display: block;
+            max-width: 90%;
+            max-height: 90%;
+        }
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        #loadingIndicator {
+            text-align: center;
+            padding: 20px;
+            font-size: 18px;
+            color: #ffffff;
+            display: none;
+        }
+        .prompt-sign {
+            color: #3498db;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        .download-instructions {
+            background-color: #3498db;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        .watermark {
+            position: absolute;
+            bottom: 10px;
+            right: 10px;
+            font-size: 12px;
+            color: rgba(255, 255, 255, 0.5);
+            pointer-events: none;
+        }
+        .error-message {
+            background-color: #e74c3c;
+            color: white;
+            padding: 10px;
+            border-radius: 5px;
+            margin-top: 20px;
+            text-align: center;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>INFINITY IMAGE GENERATOR</h1>
+        <div class="download-instructions">
+            To download an image: Click on the image, then right-click and select "Open image in new tab", then save from there.
+        </div>
+        <div class="controls">
+            <select id="styleSelect">
+                <option value="Photorealism">Photorealism</option>
+                <!-- Other options will be dynamically added here -->
+            </select>
+            <div>
+                <div class="prompt-sign">Enter your prompt:</div>
+                <input type="text" id="promptInput" placeholder="Enter your prompt..." value="cat trump eat burger">
+            </div>
+            <select id="ratioSelect">
+                <option value="1:1">1:1 (Square)</option>
+                <option value="16:9">16:9 (Widescreen)</option>
+                <option value="3:2">3:2</option>
+                <option value="2:3">2:3</option>
+                <option value="9:16">9:16 (Portrait)</option>
+            </select>
+            <input type="number" id="imageCountInput" min="1" max="10" value="10" placeholder="Number of images">
+            <button id="generateBtn">Generate Detailed Art</button>
+        </div>
+        <div class="gallery" id="artGallery">
+            <!-- Art pieces will be dynamically added here -->
+        </div>
+        <div id="loadingIndicator">Loading more images...</div>
+        <div id="errorMessage" class="error-message"></div>
+    </div>
+
+    <div id="imageModal" class="modal">
+        <span class="close">×</span>
+        <img class="modal-content" id="modalImage">
+        <div class="watermark">by jojo</div>
+    </div>
+
+    <script>
+        const styles = [
+            "Photorealism", "Hyperrealism", "Digital Art", "Abstract Expressionism", "Art Deco", 
+            "Art Nouveau", "Baroque", "Bauhaus", "Cubism", "Expressionism", "Fauvism", 
+            "Impressionism", "Minimalism", "Pop Art", "Renaissance", "Romanticism", 
+            "Surrealism", "Ukiyo-e", "Street Art"
+        ];
+
+        const styleSelect = document.getElementById('styleSelect');
+        const promptInput = document.getElementById('promptInput');
+        const ratioSelect = document.getElementById('ratioSelect');
+        const imageCountInput = document.getElementById('imageCountInput');
+        const generateBtn = document.getElementById('generateBtn');
+        const artGallery = document.getElementById('artGallery');
+        const modal = document.getElementById('imageModal');
+        const modalImg = document.getElementById("modalImage");
+        const closeBtn = document.getElementsByClassName("close")[0];
+        const loadingIndicator = document.getElementById('loadingIndicator');
+        const errorMessage = document.getElementById('errorMessage');
+
+        let isLoading = false;
+
+        // Populate style select options
+        styles.forEach(style => {
+            if (style !== "Photorealism") {  // Skip Photorealism as it's already the first option
+                const option = document.createElement('option');
+                option.value = style;
+                option.textContent = style;
+                styleSelect.appendChild(option);
+            }
+        });
+
+        function enhancePrompt(prompt, style) {
+            const enhancers = [
+                "highly detailed", "intricate", "photorealistic", "4k resolution",
+                "vibrant colors", "dramatic lighting", "professional photography",
+                "cinematic", "award-winning", "masterpiece", "ultra-realistic",
+                "lifelike", "hyper-detailed", "studio quality", "perfect composition"
+            ];
+            const randomEnhancers = enhancers.sort(() => 0.5 - Math.random()).slice(0, 4);
+            return `${prompt}, ${style} style, ${randomEnhancers.join(", ")}, trending on artstation, 8k resolution`;
+        }
+
+        function generateNegativePrompt() {
+            const negativePrompts = [
+                "blurry, out of focus", "low quality", "pixelated", "watermark", "signature",
+                "poorly drawn", "distorted proportions", "amateur", "unprofessional",
+                "overexposed", "underexposed", "grainy", "noisy", "jpeg artifacts",
+                "bad composition", "cropped", "frame", "text", "logo"
+            ];
+            const randomNegatives = negativePrompts.sort(() => 0.5 - Math.random()).slice(0, 5);
+            return randomNegatives.join(", ");
+        }
+
+        async function generateArt(append = false, similarToImage = null) {
+            if (isLoading) return;
+            isLoading = true;
+            loadingIndicator.style.display = 'block';
+            errorMessage.style.display = 'none';
+
+            try {
+                const style = styleSelect.value;
+                const basePrompt = promptInput.value || "A captivating photorealistic scene";
+                const enhancedPrompt = enhancePrompt(basePrompt, style);
+                const negativePrompt = generateNegativePrompt();
+                const ratio = ratioSelect.value;
+                const imageCount = parseInt(imageCountInput.value);
+
+                if (!append) {
+                    artGallery.innerHTML = '';
+                }
+
+                for (let i = 0; i < imageCount; i++) {
+                    const artPiece = document.createElement('div');
+                    artPiece.className = 'art-piece';
+
+                    let width, height;
+                    switch(ratio) {
+                        case "1:1":
+                            width = height = 800;
+                            break;
+                        case "16:9":
+                            width = 800;
+                            height = 450;
+                            break;
+                        case "3:2":
+                            width = 800;
+                            height = 533;
+                            break;
+                        case "2:3":
+                            width = 533;
+                            height = 800;
+                            break;
+                        case "9:16":
+                            width = 450;
+                            height = 800;
+                            break;
+                        default:
+                            width = height = 800;
+                    }
+
+                    const imageUrl = similarToImage || `https://picsum.photos/${width}/${height}?random=${Date.now() + i}`;
+
+                    // Simulate image generation with a delay
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+
+                    // Check if the image loads successfully
+                    try {
+                        await new Promise((resolve, reject) => {
+                            const img = new Image();
+                            img.onload = resolve;
+                            img.onerror = reject;
+                            img.src = imageUrl;
+                        });
+                    } catch (imageError) {
+                        throw new Error('Failed to load image');
+                    }
+
+                    artPiece.innerHTML = `
+                        <img src="${imageUrl}" alt="${enhancedPrompt}" onclick="openModal(this.src)" width="${width}" height="${height}">
+                        <div class="art-info">
+                            <h3>${basePrompt}</h3>
+                            <p>Style: ${style}</p>
+                            <p>Ratio: ${ratio}</p>
+                            <p>Enhanced Prompt: ${enhancedPrompt}</p>
+                            <p>Negative Prompt: ${negativePrompt}</p>
+                            <button class="similar-btn" onclick="generateSimilar('${imageUrl}')">Generate Similar</button>
+                        </div>
+                        <div class="watermark">by jojo</div>
+                    `;
+
+                    artGallery.appendChild(artPiece);
+                }
+            } catch (error) {
+                console.error("Error generating art:", error);
+                errorMessage.textContent = "An error occurred while generating images. Please try again later.";
+                errorMessage.style.display = 'block';
+            } finally {
+                isLoading = false;
+                loadingIndicator.style.display = 'none';
+            }
+        }
+
+        function generateSimilar(imageUrl) {
+            generateArt(true, imageUrl);
+        }
+
+        function openModal(src) {
+            modal.style.display = "block";
+            modalImg.src = src;
+        }
+
+        closeBtn.onclick = function() {
+            modal.style.display = "none";
+        }
+
+        window.onclick = function(event) {
+            if (event.target == modal) {
+                modal.style.display = "none";
+            }
+        }
+
+        generateBtn.addEventListener('click', () => generateArt(false));
+
+        // Generate initial art pieces
+        generateArt(false);
+
+        // Infinite scroll
+        window.addEventListener('scroll', () => {
+            if ((window.innerHeight + window.scrollY) >= document.body.offsetHeight - 500 && !isLoading) {
+                generateArt(true);
+            }
+        });
+    </script>
+</body></html>
